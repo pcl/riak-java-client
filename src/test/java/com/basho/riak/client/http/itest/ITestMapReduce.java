@@ -20,6 +20,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -135,4 +136,21 @@ public class ITestMapReduce {
         assertEquals(23, results.getInt(23));
         assertEquals(49, results.getInt(49));
     }
+
+    @Test public void doErlangMapReduce_filterNotFound() throws IOException, JSONException {
+        RiakClient c = new RiakClient(RIAK_URL);
+        MapReduceBuilder builder = new MapReduceBuilder(c);
+        builder.addRiakObject(BUCKET_NAME, "java_0");
+        builder.addRiakObject(BUCKET_NAME, "java_1");
+        builder.addRiakObject(BUCKET_NAME, UUID.randomUUID().toString());
+        builder.addRiakObject(BUCKET_NAME, UUID.randomUUID().toString());
+        builder.addRiakObject(BUCKET_NAME, UUID.randomUUID().toString());
+        builder.map(new ErlangFunction("riak_kv_mapreduce", "map_object_value"), "filter_notfound", true);
+        MapReduceResponse response = builder.submit();
+        assertTrue(response.isSuccess());
+        JSONArray results = response.getResults();
+        assertEquals(2, results.length());
+        assertEquals(0, results.getInt(0));
+        assertEquals(1, results.getInt(1));
+     }
 }
