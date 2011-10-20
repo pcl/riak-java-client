@@ -258,10 +258,10 @@ public abstract class ITestBucket {
         final String originalValue = "first_value";
         final String newValue = "second_value";
 
-        Bucket b = client.fetchBucket(bucket).execute();
+        final Bucket b = client.fetchBucket(bucket).execute();
         b.store(key, originalValue).execute();
 
-        IRiakObject obj = b.fetch(key).execute();
+        final IRiakObject obj = b.fetch(key).execute();
 
         assertNotNull(obj);
         assertEquals(originalValue, obj.getValueAsString());
@@ -275,19 +275,40 @@ public abstract class ITestBucket {
         assertNull(obj2);
         assertTrue(fo.isUnmodified());
 
-        // wait because of coarseness of last modified time update (HTTP).
-        Thread.sleep(1000);
         // change it, fetch it
-        obj.setValue(newValue);
-        b.store(obj).withConverter(new PassThroughConverter()).execute();
 
-        IRiakObject obj3 = b.fetch(key)
-            .ifModified(obj.getVClock()) // in case of PB
-            .modifiedSince(obj.getLastModified()) // in case of HTTP
-            .execute();
+        Callable<Void> c = new Callable<Void>() {
 
-        assertNotNull(obj3);
-        assertEquals(newValue, obj3.getValueAsString());
+            public Void call() throws Exception {
+                obj.setValue(newValue);
+                b.store(obj).withConverter(new PassThroughConverter()).execute();
+
+                IRiakObject obj3 = b.fetch(key)
+                    .ifModified(obj.getVClock()) // in case of PB
+                    .modifiedSince(obj.getLastModified()) // in case of HTTP
+                    .execute();
+
+                assertNotNull(obj3);
+                assertEquals(newValue, obj3.getValueAsString());
+                return null;
+            }
+        };
+
+        doUntilPasses(1000, c);
+    }
+
+    private void doUntilPasses(long sleep, Callable<Void> callable) throws Exception {
+        if(sleep > 60000) {
+            fail("After 60 seconds this test still hasn't passed, bailing out");
+        }
+        try {
+            callable.call();
+        } catch (AssertionError e) {
+            Thread.sleep(sleep);
+            doUntilPasses(sleep * 2, callable);
+        } catch (Exception e) {
+            throw e;
+        }
     }
 
     @Test public void deletedVclock() throws Exception {
@@ -431,7 +452,7 @@ public abstract class ITestBucket {
         final String v1 = "v1";
         final String v2 = "v2";
         final String v3 = "v3";
-        final SynchronousQueue<Integer> sync = new SynchronousQueue<Integer>(true);
+        final SynchronousQueue<Long> sync = new SynchronousQueue<Long>(true);
         final CountDownLatch endLatch = new CountDownLatch(1);
 
         final IRiakClient client = getClient();
@@ -442,10 +463,10 @@ public abstract class ITestBucket {
             public void run() {
                 try {
                     while (!Thread.currentThread().isInterrupted()) {
-                        sync.take(); // block until the other thread has fetched
-                        Thread.sleep(1000); // throw in a sleep for the HTTP API
+                        long sleep = sync.take(); // block until the other thread has fetched
+                        Thread.sleep(sleep); // throw in a sleep for the HTTP API
                         b.store(k, v3).execute();
-                        sync.put(1); // tell the other thread that we've updated
+                        sync.put(sleep); // tell the other thread that we've updated
                                      // the value
                     }
                 } catch (RiakException e) {
@@ -463,25 +484,33 @@ public abstract class ITestBucket {
         helperThread.start();
         final Runnable failer = new Runnable() {
             public void run() {
-                try {
-                    b.store(k, v2).ifNotModified(true).withMutator(new Mutation<IRiakObject>() {
+                long sleep = 250;
+                boolean failed = false;
+                while (!failed) {
+                    try {
+                        final long wait = sleep;
+                        b.store(k, v2).ifNotModified(true).withMutator(new Mutation<IRiakObject>() {
 
-                        public IRiakObject apply(IRiakObject original) {
-                            try {
-                                sync.put(1); // tell the other thread to store
-                                sync.take(); // block until it has stored
-                            } catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
-                                throw new RuntimeException(e);
+                            public IRiakObject apply(IRiakObject original) {
+                                try {
+                                    sync.put(wait); // tell the other thread to
+                                                    // store
+                                    sync.take(); // block until it has stored
+                                } catch (InterruptedException e) {
+                                    Thread.currentThread().interrupt();
+                                    throw new RuntimeException(e);
+                                }
+                                return original;
                             }
-                            return original;
-                        }
-                    }).execute();
-                    fail("Expected an exception");
-                } catch (RiakRetryFailedException e) {
-                    assertTrue((e.getCause() instanceof ModifiedException));
-                    helperThread.interrupt();
-                    endLatch.countDown();
+                        }).execute();
+                        // no error? Sleep longer
+                        sleep = sleep * 2;
+                    } catch (RiakRetryFailedException e) {
+                        assertTrue((e.getCause() instanceof ModifiedException));
+                        failed = true;
+                        helperThread.interrupt();
+                        endLatch.countDown();
+                    }
                 }
             }
         };
@@ -489,9 +518,9 @@ public abstract class ITestBucket {
         final Thread failerThread = new Thread(failer);
         failerThread.start();
 
-        boolean success = endLatch.await(10, TimeUnit.SECONDS);
+        boolean success = endLatch.await(60, TimeUnit.SECONDS);
 
-        assertTrue(success);
+        assertTrue("Expected the test to have succeeded within 60 seconds", success);
     }
 
     @Test public void deleteWithFetchedVClock() throws Exception {
