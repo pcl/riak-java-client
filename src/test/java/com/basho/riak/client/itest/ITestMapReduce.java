@@ -24,7 +24,10 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.type.TypeFactory;
@@ -292,6 +295,39 @@ public abstract class ITestMapReduce {
         List<Integer> items = new LinkedList<Integer>(result.getResult(Integer.class));
         assertEquals(1, items.size());
         assertEquals(new Integer(1), items.get(0));
+    }
+
+    @Test public void concurrentMapReduces() throws Exception {
+        int threads = 10;
+        final CountDownLatch startLatch = new CountDownLatch(1);
+        final CountDownLatch endLatch = new CountDownLatch(threads);
+        final Queue<AssertionError> errors = new ConcurrentLinkedQueue<AssertionError>();
+
+        for (int i = 0; i < threads; i++) {
+            Thread t = new Thread(new Runnable() {
+                public void run() {
+                    try {
+                        startLatch.await();
+                        doErlangMapReduce();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException(e);
+                    } catch (RiakException e) {
+                        throw new RuntimeException(e);
+                    } catch (AssertionError e) {
+                        errors.offer(e);
+                    } finally {
+                        endLatch.countDown();
+                    }
+                }
+            });
+            t.start();
+        }
+
+        startLatch.countDown();
+        endLatch.await();
+
+        assertTrue("Expected no errors from concurrent tests.", errors.isEmpty());
     }
 
     /**
