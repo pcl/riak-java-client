@@ -57,6 +57,7 @@ import com.basho.riak.pbc.RequestMeta;
 import com.basho.riak.pbc.RiakClient;
 import com.basho.riak.pbc.RiakError;
 import com.google.protobuf.ByteString;
+import org.apache.http.client.HttpClient;
 
 /**
  * Wraps the pbc.{@link RiakClient} and adapts it to the {@link RawClient}
@@ -497,5 +498,10 @@ public class PBClientAdapter implements RawClient {
 
     public NodeStats stats() {
         throw new UnsupportedOperationException("Not supported using protobuffer protocol.");
+    }
+
+    public HttpClient getHttpClient()
+    {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }

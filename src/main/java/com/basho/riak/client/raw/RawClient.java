@@ -280,5 +280,10 @@ public interface RawClient {
      */
     NodeStats stats() throws IOException;
     
+    /**
+     * State Farm access to underlying HTTP client
+     */
+    org.apache.http.client.HttpClient getHttpClient();
+    
     
 }

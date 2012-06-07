@@ -216,4 +216,9 @@ public interface IRiakClient {
      * @throws RiakException If Riak does not respond or if the protobuf API is being used
      */
     Iterable<NodeStats> stats() throws RiakException;
+    
+    /**
+     * State Farm access to underlying HTTP client
+     */
+    org.apache.http.client.HttpClient getHttpClient();
 }

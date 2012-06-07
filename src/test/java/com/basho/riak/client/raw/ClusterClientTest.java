@@ -46,6 +46,7 @@ import com.basho.riak.client.raw.pbc.PBClusterConfig;
 import com.basho.riak.client.raw.query.LinkWalkSpec;
 import com.basho.riak.client.raw.query.MapReduceSpec;
 import com.basho.riak.client.raw.query.MapReduceTimeoutException;
+import org.apache.http.client.HttpClient;
 
 /**
  * Tests that the abstract {@link ClusterClient} delegates and round robins
@@ -430,6 +431,11 @@ public class ClusterClientTest {
          */
         public Transport getTransport() {
             return null;
+        }
+
+        public HttpClient getHttpClient()
+        {
+            throw new UnsupportedOperationException("Not supported yet.");
         }
     }
 }

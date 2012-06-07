@@ -21,6 +21,7 @@ import com.basho.riak.client.raw.Transport;
 import com.basho.riak.client.raw.http.HTTPClientAdapter;
 import com.basho.riak.client.raw.pbc.PBClientAdapter;
 import com.basho.riak.client.raw.query.indexes.IndexQuery;
+import org.apache.http.client.HttpClient;
 
 /**
  * The default implementation of IRiakClient.
@@ -231,5 +232,10 @@ public final class DefaultRiakClient implements IRiakClient {
         } catch (Exception e) {
             throw new RiakException(e);
         }
+    }
+
+    public HttpClient getHttpClient()
+    {
+        return rawClient.getHttpClient();
     }
 }

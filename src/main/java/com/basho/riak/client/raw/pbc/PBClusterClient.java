@@ -25,6 +25,7 @@ import com.basho.riak.client.raw.Transport;
 import com.basho.riak.client.raw.config.ClusterConfig;
 import com.basho.riak.pbc.RiakClient;
 import com.basho.riak.pbc.RiakConnectionPool;
+import org.apache.http.client.HttpClient;
 
 /**
  * Concrete {@link ClusterClient} that creates a collection of
@@ -104,5 +105,10 @@ public class PBClusterClient extends ClusterClient<PBClientConfig> {
      */
     public Transport getTransport() {
         return Transport.PB;
+    }
+
+    public HttpClient getHttpClient()
+    {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }

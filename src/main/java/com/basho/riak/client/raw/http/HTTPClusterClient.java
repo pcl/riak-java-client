@@ -126,5 +126,10 @@ public class HTTPClusterClient extends ClusterClient<HTTPClientConfig> {
     public Transport getTransport() {
         return Transport.HTTP;
     }
+
+    public HttpClient getHttpClient()
+    {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
     
 }

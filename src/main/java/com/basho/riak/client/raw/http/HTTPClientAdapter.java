@@ -53,6 +53,7 @@ import com.basho.riak.client.raw.query.MapReduceTimeoutException;
 import com.basho.riak.client.raw.query.indexes.IndexQuery;
 import com.basho.riak.client.raw.query.indexes.IndexWriter;
 import com.basho.riak.client.util.CharsetUtils;
+import org.apache.http.client.HttpClient;
 import org.codehaus.jackson.map.ObjectMapper;
 
 /**
@@ -486,6 +487,11 @@ public class HTTPClientAdapter implements RawClient {
                 throw new IOException("Could not parse stats JSON response, body: " + r.getBodyAsString(),e);
             }
         }
+    }
+
+    public HttpClient getHttpClient()
+    {
+        return client.getHttpClient();
     }
     
 }
