@@ -1,4 +1,5 @@
 language: java
+script: mvn -Pitest -DargLine="-Dcom.basho.riak.search=true" -DargLine="-Dcom.basho.riak.2i=true" clean verify
 notifications:
   # Email notifications are disabled to not annoy anybody.
   # See http://about.travis-ci.org/docs/user/build-configuration/ to learn more
