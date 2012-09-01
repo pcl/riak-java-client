@@ -161,11 +161,7 @@ public class CharsetUtils {
             throw new IllegalArgumentException("Cannot get bytes without a Charset");
         }
 
-        try {
-            return new String(bytes, charset.name());
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalStateException(charset.name() + " must be present", e);
-        }
+        return new String(bytes, charset);
     }
     
     /**
